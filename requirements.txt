@@ -1,3 +1,6 @@
 matplotlib
 yfinance
 streamlit
+pandas
+requests
+BeautifulSoup
