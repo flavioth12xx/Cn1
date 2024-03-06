@@ -3,4 +3,4 @@ yfinance
 streamlit
 pandas
 requests
-BeautifulSoup
+bs4
