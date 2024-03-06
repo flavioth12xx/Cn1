@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import streamlit as st
+import yfinance as yf
 
 # Função para obter a lista de empresas da Ibovespa
 def obter_empresas_ibovespa():
@@ -16,6 +17,11 @@ def obter_empresas_ibovespa():
         empresas.append(cols[0].text.strip())
 
     return empresas
+
+# Função para obter os dados da ação selecionada
+def get_stock_data(symbol):
+    stock_data = yf.download(symbol, start="2024-01-01", end="2024-03-06")
+    return stock_data
 
 # Obtendo a lista de empresas da Ibovespa
 empresas_ibovespa = obter_empresas_ibovespa()
@@ -32,3 +38,9 @@ selected_companies = st.multiselect(
 # Mostrando as empresas selecionadas
 st.write("Empresas selecionadas:")
 st.write(selected_companies)
+
+# Exibindo os dados da ação para as empresas selecionadas
+for company in selected_companies:
+    st.subheader(f"Dados da ação para {company}")
+    stock_data = get_stock_data(company + ".SA")  # Adicionando ".SA" para o símbolo da empresa
+    st.write(stock_data)
