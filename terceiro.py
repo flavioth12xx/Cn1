@@ -23,6 +23,23 @@ def get_stock_data(symbol):
     stock_data = yf.download(symbol, start="2024-01-01", end="2024-03-06")
     return stock_data
 
+# Função para determinar a tendência da ação com base no preço atual e média móvel
+def determinar_tendencia(stock_data):
+    current_price = stock_data['Close'][-1]
+    short_term_avg = stock_data['Close'][-10:].mean()
+    long_term_avg = stock_data['Close'][-50:].mean()
+
+    if current_price > short_term_avg > long_term_avg:
+        return "Tendência de alta"
+    elif current_price < short_term_avg < long_term_avg:
+        return "Tendência de baixa"
+    else:
+        return "Sem tendência clara"
+
+# Função para determinar a volatilidade da ação
+def determinar_volatilidade(stock_data):
+    return stock_data['Close'].pct_change().std() * 100
+
 # Obtendo a lista de empresas da Ibovespa
 empresas_ibovespa = obter_empresas_ibovespa()
 
@@ -44,3 +61,11 @@ for company in selected_companies:
     st.subheader(f"Dados da ação para {company}")
     stock_data = get_stock_data(company + ".SA")  # Adicionando ".SA" para o símbolo da empresa
     st.write(stock_data)
+
+    # Determinar a tendência da ação
+    trend = determinar_tendencia(stock_data)
+    st.write(f"Tendência: {trend}")
+
+    # Determinar a volatilidade da ação
+    volatility = determinar_volatilidade(stock_data)
+    st.write(f"Volatilidade: {volatility:.2f}%")
