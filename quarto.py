@@ -14,7 +14,12 @@ class Acao:
 
     # Método para baixar os dados da ação
     def download_data(self):
-        self.data = yf.download(self.ticker + '.SA', start=self.data_inicio, end=self.data_fim)
+        try:
+            self.data = yf.download(self.ticker + '.SA', start=self.data_inicio, end=self.data_fim)
+            return True
+        except Exception as e:
+            st.error(f"Erro ao baixar dados da ação {self.ticker}: {str(e)}")
+            return False
 
     # Método para plotar o gráfico da ação
     def plot_chart(self):
@@ -84,11 +89,11 @@ if b3:
 
     # Criando objeto de ação e baixando dados
     acao = Acao(ticker, data_inicio, data_fim)
-    acao.download_data()
+    if acao.download_data():
+        # Plotando gráfico
+        acao.plot_chart()
 
-    # Plotando gráfico
-    acao.plot_chart()
+        # Exibindo informações detalhadas
+        st.subheader('Detalhes da Ação')
+        acao.show_details()
 
-    # Exibindo informações detalhadas
-    st.subheader('Detalhes da Ação')
-    acao.show_details()
