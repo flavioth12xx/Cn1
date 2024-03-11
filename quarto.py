@@ -21,20 +21,6 @@ class Acao:
             st.error(f"Erro ao baixar dados da ação {self.ticker}: {str(e)}")
             return False
 
-    # Método para plotar o gráfico da ação
-    def plot_chart(self):
-        fig, ax = plt.subplots()
-        ax.plot(self.data.index, self.data['Close'])
-        ax.set_xlabel('Data')
-        ax.set_ylabel('Preço de Fechamento (R$)')
-        ax.set_title(f'Gráfico de Preço da Ação {self.ticker}')
-        st.pyplot(fig)
-
-    # Método para exibir informações detalhadas da ação
-    def show_details(self):
-        st.write(f"**Ticker:** {self.ticker}")
-        st.write(self.data.describe())
-
 # Função para obter a lista de empresas da Ibovespa
 def obter_empresas_ibovespa():
     url = "https://pt.wikipedia.org/wiki/Lista_de_companhias_citadas_no_Ibovespa"
@@ -90,10 +76,5 @@ if b3:
     # Criando objeto de ação e baixando dados
     acao = Acao(ticker, data_inicio, data_fim)
     if acao.download_data():
-        # Plotando gráfico
-        acao.plot_chart()
-
-        # Exibindo informações detalhadas
-        st.subheader('Detalhes da Ação')
-        acao.show_details()
-
+        # Plotando gráfico em tempo real
+        st.line_chart(acao.data['Close'])
