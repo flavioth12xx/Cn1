@@ -48,7 +48,7 @@ def calcular_retorno(valor_investido, lucro_por_acao):
 empresas_ibovespa = obter_empresas_ibovespa()
 
 # Criando o aplicativo Streamlit
-st.title("Análise de Ações da Ibovespa")
+st.title("Análise de Ações Para a Melhor Aplicação de Seu Dinheiro")
 
 # Adicionando chatbox para inserir o valor a ser investido
 valor_investido = st.number_input("Digite o valor a ser investido:", min_value=0.01, step=0.01)
