@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import streamlit as st
 import yfinance as yf
+pip install sympy as sp
 from sympy import Symbol, solve
 
 # Função para obter a lista de empresas da Ibovespa
