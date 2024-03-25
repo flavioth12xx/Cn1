@@ -98,7 +98,8 @@ for company in selected_companies:
 
   # Determinar a tendência da ação
   trend = determinar_tendencia(stock_data)
-  #st.
+  st.write(f"Tendência: {trend}")
+
 
 
 
