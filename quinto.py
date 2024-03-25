@@ -39,18 +39,31 @@ def determinar_tendencia(stock_data):
 
 # Função para determinar a volatilidade da ação
 def determinar_volatilidade(stock_data):
-   return stock_data['Close'].pct_change().std() * 100
+  return stock_data['Close'].pct_change().std() * 100
 
 # Função para plotar o gráfico da ação
-def plot_stock_chart(stock_data):
+def plot_stock_chart(stock_data, symbol):
+
   # Cria um objeto sympy para o tempo
   t = Symbol('t')
 
   # Cria uma função sympy para o preço da ação
-  price = sin(2*pi*t) + 50
+  # Fechando o preço com a média móvel exponencial de 10 dias
+  close_prices = stock_data['Close']
+  ema_10 = close_prices.ewm(span=10, min_periods=10).mean()
+  price = ema_10
 
   # Plota o gráfico
-  plot(price, (t, 0, 10), title='Preço da Ação')
+  plot(price, (t, 0, len(close_prices)), title=f'Preço da Ação {symbol}', xlabel='Tempo (dias)', ylabel='Preço (R$)')
+
+  # Plotando a média móvel exponencial de 10 dias
+  plot(ema_10, (t, 0, len(close_prices)), color='orange', linestyle='dashed', legend=True)
+
+  # Adicionando legendas
+  legend()
+
+  # Mostra o gráfico
+  st.pyplot()
 
 # Obtendo a lista de empresas da Ibovespa
 empresas_ibovespa = obter_empresas_ibovespa()
@@ -61,7 +74,7 @@ st.title("Empresas Listadas na Ibovespa")
 # Adicionando checkboxes para cada empresa
 selected_companies = st.multiselect(
   "Selecione as empresas",
-    empresas_ibovespa
+  empresas_ibovespa
 )
 
 # Mostrando as empresas selecionadas
@@ -74,7 +87,7 @@ for company in selected_companies:
   stock_data = get_stock_data(company + ".SA") # Adicionando ".SA" para o símbolo da empresa
   st.write(stock_data)
 
-# Chatbot para inserir o valor a ser investido
+  # Chatbot para inserir o valor a ser investido
   valor_investido = st.number_input("Valor a ser investido:", min_value=0.01)
 
   # Determinar a quantidade de ações que podem ser compradas
@@ -85,9 +98,8 @@ for company in selected_companies:
 
   # Determinar a tendência da ação
   trend = determinar_tendencia(stock_data)
-  st.write(f"Tendência: {trend}")
+  st.
 
-  # Determinar a volatilidade da ação
 
 
 
