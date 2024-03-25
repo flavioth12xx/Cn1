@@ -88,3 +88,4 @@ for company in selected_companies:
   st.write(f"Tendência: {trend}")
 
   # Determinar a volatilidade da ação
+
