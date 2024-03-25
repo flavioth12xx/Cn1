@@ -3,8 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import streamlit as st
 import yfinance as yf
-pip install sympy as sp
-from sympy import Symbol, solve
+from sympy import *
 
 # Função para obter a lista de empresas da Ibovespa
 def obter_empresas_ibovespa():
@@ -21,34 +20,43 @@ def obter_empresas_ibovespa():
   return empresas
 
 # Função para obter os dados da ação selecionada
-def get_stock_data(symbol, start_date, end_date):
-  stock_data = yf.download(symbol, start=start_date, end=end_date)
+def get_stock_data(symbol):
+  stock_data = yf.download(symbol, start="2024-01-01", end="2024-03-06")
   return stock_data
 
-# Função para calcular o lucro em relação ao dinheiro investido
-def calcular_lucro(valor_investido, preco_compra, preco_venda):
-  lucro = (preco_venda - preco_compra) * valor_investido
-  return lucro
+# Função para determinar a tendência da ação com base no preço atual e média móvel
+def determinar_tendencia(stock_data):
+  current_price = stock_data['Close'][-1]
+  short_term_avg = stock_data['Close'][-10:].mean()
+  long_term_avg = stock_data['Close'][-50:].mean()
 
-# Função para calcular o lucro utilizando Sympy
-def calcular_lucro_sympy(valor_investido, preco_compra, preco_venda):
-  x = Symbol('x')  # Variavel para o lucro
-  equacao = lucro == valor_investido * (preco_venda - preco_compra)
-  solucao = solve(equacao, x)
-  return solucao[0]
+  if current_price > short_term_avg > long_term_avg:
+    return "Tendência de alta"
+  elif current_price < short_term_avg < long_term_avg:
+    return "Tendência de baixa"
+  else:
+    return "Sem tendência clara"
+
+# Função para determinar a volatilidade da ação
+def determinar_volatilidade(stock_data):
+  return stock_data['Close'].pct_change().std() * 100
+
+# Função para plotar o gráfico da ação
+def plot_stock_chart(stock_data):
+  # Cria um objeto sympy para o tempo
+  t = Symbol('t')
+
+  # Cria uma função sympy para o preço da ação
+  price = sin(2*pi*t) + 50
+
+  # Plota o gráfico
+  plot(price, (t, 0, 10), title='Preço da Ação')
 
 # Obtendo a lista de empresas da Ibovespa
 empresas_ibovespa = obter_empresas_ibovespa()
 
 # Criando o aplicativo Streamlit
-st.title("Análise de Lucro em Ações")
-
-# Adicionando caixa de texto para inserir o valor a ser investido
-valor_investido = st.number_input("Digite o valor a ser investido:", min_value=0.01, step=0.01)
-
-# Adicionando caixas de texto para inserir as datas de compra e venda
-data_compra = st.date_input("Data de compra:", value="2023-01-01")
-data_venda = st.date_input("Data de venda:", value="2023-12-31")
+st.title("Empresas Listadas na Ibovespa")
 
 # Adicionando checkboxes para cada empresa
 selected_companies = st.multiselect(
@@ -63,17 +71,20 @@ st.write(selected_companies)
 # Exibindo os dados da ação para as empresas selecionadas
 for company in selected_companies:
   st.subheader(f"Dados da ação para {company}")
-  stock_data = get_stock_data(company + ".SA", data_compra, data_venda)
+  stock_data = get_stock_data(company + ".SA") # Adicionando ".SA" para o símbolo da empresa
   st.write(stock_data)
 
-  # Calcular o lucro
-  preco_compra = stock_data['Close'][0]
-  preco_venda = stock_data['Close'][-1]
-  lucro = calcular_lucro(valor_investido, preco_compra, preco_venda)
+  # Chatbot para inserir o valor a ser investido
+  valor_investido = st.number_input("Valor a ser investido:", min_value=0.01)
 
-  # Calcular o lucro utilizando Sympy
-  lucro_sympy = calcular_lucro_sympy(valor_investido, preco_compra, preco_venda)
+  # Determinar a quantidade de ações que podem ser compradas
+  quantidade_acoes = valor_investido / stock_data['Close'][-1]
 
-  # Exibir o lucro
-  st.write(f"Lucro: {lucro:.2f}")
-  st.write(f"Lucro (Sympy): {lucro_sympy}")
+  # Mostrar a quantidade de ações que podem ser compradas
+  st.write(f"Quantidade de ações que podem ser compradas: {quantidade_acoes:.2f}")
+
+  # Determinar a tendência da ação
+  trend = determinar_tendencia(stock_data)
+  st.write(f"Tendência: {trend}")
+
+  # Determinar a volatilidade da ação
