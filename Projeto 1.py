@@ -54,15 +54,12 @@ def plot_stock_chart(stock_data, symbol):
     price = ema_10
 
     # Plota o gráfico
-    plot(price, (t, 0, len(close_prices)), title=f'Preço da Ação {symbol}', xlabel='Tempo (dias)', ylabel='Preço (R$)')
-
-    # Plotando a média móvel exponencial de 10 dias
-    plot(ema_10, (t, 0, len(close_prices)), color='orange', linestyle='dashed', legend=True)
-
-    # Adicionando legendas
-    legend()
-
-    # Mostra o gráfico
+    plt.plot(price, label='Preço da Ação')
+    plt.plot(ema_10, label='Média Móvel de 10 dias', linestyle='dashed')
+    plt.title(f'Preço da Ação {symbol}')
+    plt.xlabel('Tempo (dias)')
+    plt.ylabel('Preço (R$)')
+    plt.legend()
     st.pyplot()
 
 # Função para determinar a porcentagem ideal de investimento em uma ação
