@@ -59,10 +59,7 @@ empresas_ibovespa = obter_empresas_ibovespa()
 st.title("Empresas Listadas na Ibovespa")
 
 # Adicionando checkboxes para cada empresa
-selected_companies = st.multiselect(
-  "Selecione as empresas",
-  empresas_ibovespa
-)
+selected_companies = st.multiselect( "Selecione as empresas", empresas_ibovespa)
 
 # Mostrando as empresas selecionadas
 st.write("Empresas selecionadas:")
@@ -92,5 +89,3 @@ for company in selected_companies:
   st.write(f"Volatilidade: {volatilidade:.2f}%")
 
   # Cálculo do índice P/L
-
- 
