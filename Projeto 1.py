@@ -23,17 +23,20 @@ def obter_empresas_ibovespa():
 
     return empresas
 
-# Função para obter os dados da ação selecionada
-def get_stock_data(symbol):
-    stock_data = yf.download(symbol, start="2024-01-01", end="2024-03-06")
+# Função para obter os dados das ações selecionadas
+def get_stock_data(symbols):
+    stock_data = pd.DataFrame()
+    for symbol in symbols:
+        data = yf.download(symbol, start="2024-01-01", end="2024-03-06")['Close']
+        stock_data = pd.concat([stock_data, data], axis=1)
     return stock_data
 
 # Função para determinar a tendência da ação com base no preço atual e média móvel
 def determinar_tendencia(stock_data):
     if not stock_data.empty:
-        current_price = stock_data['Close'][-1]
-        short_term_avg = stock_data['Close'][-10:].mean()
-        long_term_avg = stock_data['Close'][-50:].mean()
+        current_price = stock_data[-1]
+        short_term_avg = stock_data[-10:].mean()
+        long_term_avg = stock_data[-50:].mean()
 
         if current_price > short_term_avg > long_term_avg:
             return "Tendência de alta"
@@ -58,7 +61,7 @@ def determinar_porcentagem_investimento(stock_data, perfil_investidor):
     """
     if not stock_data.empty:
         # Cálculo da volatilidade da ação
-        volatilidade = stock_data['Close'].pct_change().std() * 100
+        volatilidade = stock_data.pct_change().std() * 100
 
         # Tendência da ação
         trend = determinar_tendencia(stock_data)
@@ -79,22 +82,14 @@ def determinar_porcentagem_investimento(stock_data, perfil_investidor):
         return 0  # Retorna 0 se o DataFrame estiver vazio
 
 # Função para plotar o gráfico da ação
-def plot_stock_chart(stock_data, symbol):
-
-    # Cria um objeto sympy para o tempo
-    t = Symbol('t')
-
-    # Cria uma função sympy para o preço da ação
-    # Fechando o preço com a média móvel exponencial de 10 dias
-    close_prices = stock_data['Close']
-    ema_10 = close_prices.ewm(span=10, min_periods=10).mean()
-    price = ema_10
+def plot_stock_chart(stock_data, symbols):
 
     # Plota o gráfico
     fig, ax = plt.subplots()
-    ax.plot(price, label='Preço da Ação')
-    ax.plot(ema_10, label='Média Móvel de 10 dias', linestyle='dashed')
-    ax.set_title(f'Preço da Ação {symbol}')
+    for symbol in symbols:
+        if symbol in stock_data.columns:
+            ax.plot(stock_data[symbol], label=f'Preço da Ação {symbol}')
+    ax.set_title(f'Preços das Ações {", ".join(symbols)}')
     ax.set_xlabel('Tempo (dias)')
     ax.set_ylabel('Preço (R$)')
     ax.legend()
@@ -107,24 +102,27 @@ if __name__ == "__main__":
     # Obter lista de empresas da Ibovespa
     empresas = obter_empresas_ibovespa()
 
-    # Selecionar ação para análise
-    selected_symbol = st.selectbox("Selecione uma empresa da lista:", empresas)
+    # Selecionar ações para análise
+    selected_symbols = st.multiselect("Selecione as empresas da lista:", empresas)
 
-    # Obter dados da ação selecionada
-    stock_data = get_stock_data(selected_symbol)
+    if selected_symbols:
+        # Obter dados das ações selecionadas
+        stock_data = get_stock_data(selected_symbols)
 
-    # Plotar gráfico da ação
-    plot_stock_chart(stock_data, selected_symbol)
+        # Plotar gráfico das ações
+        plot_stock_chart(stock_data, selected_symbols)
 
-    # Determinar porcentagem ideal de investimento
-    perfil_investidor = st.radio("Selecione o perfil do investidor:", ("Conservador", "Moderado", "Agressivo"))
-    porcentagem_investimento = determinar_porcentagem_investimento(stock_data, perfil_investidor.lower())
+        # Determinar porcentagem ideal de investimento
+        perfil_investidor = st.radio("Selecione o perfil do investidor:", ("Conservador", "Moderado", "Agressivo"))
+        porcentagem_investimento = determinar_porcentagem_investimento(stock_data, perfil_investidor.lower())
 
-    st.write(f"Porcentagem ideal de investimento: {porcentagem_investimento}%")
+        st.write(f"Porcentagem ideal de investimento: {porcentagem_investimento}%")
 
-    # Chatbox para inserir o valor do investimento
-    valor_investimento = st.number_input("Insira o valor que deseja investir:", min_value=0.0)
+        # Chatbox para inserir o valor do investimento
+        valor_investimento = st.number_input("Insira o valor que deseja investir:", min_value=0.0)
 
-    # Cálculo do lucro esperado
-    lucro_esperado = (porcentagem_investimento / 100) * valor_investimento
-    st.write(f"Lucro esperado: R$ {lucro_esperado:.2f}")
+        # Cálculo do lucro esperado
+        lucro_esperado = (porcentagem_investimento / 100) * valor_investimento
+        st.write(f"Lucro esperado: R$ {lucro_esperado:.2f}")
+    else:
+        st.warning("Selecione pelo menos uma empresa para análise.")
