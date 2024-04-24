@@ -4,6 +4,7 @@ import yfinance as yf
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.optimize import minimize
 
 # Definindo a URL da página da Wikipedia
