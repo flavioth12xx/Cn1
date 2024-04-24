@@ -1,128 +1,132 @@
-import pandas as pd
-import matplotlib.pyplot as plt
+import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import streamlit as st
 import yfinance as yf
-from sympy import *
+import pandas as pd
+import numpy as np
+from scipy.optimize import minimize
 
-# Definir configuração para evitar o aviso de uso global do Pyplot
-st.set_option('deprecation.showPyplotGlobalUse', False)
-
-# Função para obter a lista de empresas da Ibovespa
-def obter_empresas_ibovespa():
+def obter_lista_acoes_ibovespa():
+    # URL da página da Wikipedia
     url = "https://pt.wikipedia.org/wiki/Lista_de_companhias_citadas_no_Ibovespa"
+
+    # Fazendo a requisição para obter o conteúdo da página
     response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
-    table = soup.find("table", {"class": "wikitable"})
 
-    empresas = []
-    for row in table.find_all("tr")[1:]:
-        cols = row.find_all("td")
-        empresas.append(cols[0].text.strip())
+    # Verificando se a requisição foi bem-sucedida
+    if response.status_code == 200:
+        # Criando o objeto BeautifulSoup
+        soup = BeautifulSoup(response.content, "html.parser")
 
-    return empresas
+        # Encontrando a tabela que contém a lista de ações
+        table = soup.find("table", {"class": "wikitable sortable"})
 
-# Função para obter os dados das ações selecionadas
-def get_stock_data(symbols):
-    stock_data = pd.DataFrame()
-    for symbol in symbols:
-        data = yf.download(symbol, start="2024-01-01", end="2024-03-06")['Close']
-        stock_data = pd.concat([stock_data, data], axis=1)
-    return stock_data
-
-# Função para determinar a tendência da ação com base no preço atual e média móvel
-def determinar_tendencia(stock_data):
-    if not stock_data.empty:
-        current_price = stock_data[-1]
-        short_term_avg = stock_data[-10:].mean()
-        long_term_avg = stock_data[-50:].mean()
-
-        if current_price > short_term_avg > long_term_avg:
-            return "Tendência de alta"
-        elif current_price < short_term_avg < long_term_avg:
-            return "Tendência de baixa"
+        # Verificando se a tabela foi encontrada
+        if table:
+            # Iterando pelas linhas da tabela para obter os nomes das ações
+            companies = []
+            for row in table.find_all("tr")[1:]:
+                cells = row.find_all("td")
+                if len(cells) >= 2:  # Verifica se há pelo menos duas células na linha
+                    nome_acao = cells[0].text.strip()  # Obtém o nome da ação
+                    companies.append(nome_acao)
+            return companies
         else:
-            return "Sem tendência clara"
+            st.error("Tabela não encontrada.")
+            return None
     else:
-        return "Sem dados disponíveis"
+        st.error("Erro ao acessar a página.")
+        return None
 
-# Função para determinar a porcentagem ideal de investimento em uma ação
-def determinar_porcentagem_investimento(stock_data, perfil_investidor):
-    """
-    Função para determinar a porcentagem ideal de investimento em uma ação.
+def get_adj_close_prices(tickers, start_date, end_date):
+    # Cria um DataFrame vazio para armazenar os preços ajustados de fechamento
+    df_prices = pd.DataFrame()
 
-    Args:
-        stock_data: DataFrame com os dados da ação.
-        perfil_investidor: String que indica o perfil do investidor ("conservador", "moderado" ou "agressivo").
+    # Itera sobre os tickers para obter os preços de cada empresa
+    for ticker in tickers:
+        # Obtém os dados do ticker no intervalo de datas especificado
+        data = yf.download(ticker + ".SA", start=start_date, end=end_date)
+        # Adiciona os preços ajustados de fechamento ao DataFrame
+        df_prices[ticker] = data["Adj Close"]
 
-    Returns:
-        Float que representa a porcentagem ideal de investimento.
-    """
-    if not stock_data.empty:
-        # Cálculo da volatilidade da ação
-        volatilidade = stock_data.pct_change().std() * 100
+    return df_prices
 
-        # Tendência da ação
-        trend = determinar_tendencia(stock_data)
+def calculate_sharpe_ratio(df_prices, weights):
+    if isinstance(weights, list):
+        weights = np.array(weights)
+    # Calcula os retornos diários das ações
+    daily_returns = df_prices.pct_change()
 
-        # Fator de ajuste para o perfil do investidor
-        fator_ajuste = 0.5 if perfil_investidor == "conservador" else 1.0 if perfil_investidor == "moderado" else 1.5
+    # Calcula o retorno anualizado médio das ações
+    annual_returns = daily_returns.mean() * 252  # 252 dias úteis em um ano
 
-        # Cálculo da porcentagem de investimento
-        porcentagem_investimento = (100 - volatilidade) * fator_ajuste
+    # Calcula a matriz de covariância dos retornos diários das ações
+    cov_matrix = daily_returns.cov()
 
-        # Se a ação estiver em tendência de baixa, ajusta a porcentagem
-        if trend == "Tendência de baixa":
-            porcentagem_investimento *= 0.5
+    # Calcula o retorno e a volatilidade da carteira
+    portfolio_return = np.dot(annual_returns, weights)
+    portfolio_std_dev = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights))) * np.sqrt(252)
 
-        # Retorna a porcentagem de investimento
-        return porcentagem_investimento
-    else:
-        return 0  # Retorna 0 se o DataFrame estiver vazio
+    # Define a taxa livre de risco (geralmente usa-se a taxa de juros de títulos do governo)
+    risk_free_rate = 0.05  # Exemplo: 5% ao ano
 
-# Função para plotar o gráfico da ação
-def plot_stock_chart(stock_data, symbols):
+    # Calcula o índice de Sharpe
+    sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_std_dev
 
-    # Plota o gráfico
-    fig, ax = plt.subplots()
-    for symbol in symbols:
-        if symbol in stock_data.columns:
-            ax.plot(stock_data[symbol], label=f'Preço da Ação {symbol}')
-    ax.set_title(f'Preços das Ações {", ".join(symbols)}')
-    ax.set_xlabel('Tempo (dias)')
-    ax.set_ylabel('Preço (R$)')
-    ax.legend()
-    st.pyplot(fig)
+    return sharpe_ratio
 
-# Exemplo de uso das funções
-if __name__ == "__main__":
-    st.title("Análise de Ações")
+def maximize_sharpe_ratio(df_prices):
+    # Função objetivo a ser minimizada
+    def negative_sharpe_ratio(weights):
+        return -calculate_sharpe_ratio(df_prices, weights)
 
-    # Obter lista de empresas da Ibovespa
-    empresas = obter_empresas_ibovespa()
+    # Restrição: a soma dos pesos deve ser igual a 1
+    constraints = ({'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1})
 
-    # Selecionar ações para análise
-    selected_symbols = st.multiselect("Selecione as empresas da lista:", empresas)
+    # Limites dos pesos (0 <= peso <= 1)
+    bounds = [(0, 1) for _ in range(len(df_prices.columns))]
 
-    if selected_symbols:
-        # Obter dados das ações selecionadas
-        stock_data = get_stock_data(selected_symbols)
+    # Chute inicial para os pesos
+    initial_guess = np.ones(len(df_prices.columns)) / len(df_prices.columns)
 
-        # Plotar gráfico das ações
-        plot_stock_chart(stock_data, selected_symbols)
+    # Minimiza a função objetivo negativa para maximizar o índice de Sharpe
+    result = minimize(negative_sharpe_ratio, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
 
-        # Determinar porcentagem ideal de investimento
-        perfil_investidor = st.radio("Selecione o perfil do investidor:", ("Conservador", "Moderado", "Agressivo"))
-        porcentagem_investimento = determinar_porcentagem_investimento(stock_data, perfil_investidor.lower())
+    # Retorna os pesos ótimos que maximizam o índice de Sharpe
+    return result.x
 
-        st.write(f"Porcentagem ideal de investimento: {porcentagem_investimento}%")
+# Função para calcular o lucro com base no índice de Sharpe e no valor investido
+def calculate_profit(investment_amount, sharpe_ratio):
+    return investment_amount * sharpe_ratio
 
-        # Chatbox para inserir o valor do investimento
-        valor_investimento = st.number_input("Insira o valor que deseja investir:", min_value=0.0)
+# Título da página
+st.title('Análise de Investimentos')
 
-        # Cálculo do lucro esperado
-        lucro_esperado = (porcentagem_investimento / 100) * valor_investimento
-        st.write(f"Lucro esperado: R$ {lucro_esperado:.2f}")
-    else:
-        st.warning("Selecione pelo menos uma empresa para análise.")
+# Obtém a lista de ações da Ibovespa
+tickers_ibovespa = obter_lista_acoes_ibovespa()
+if tickers_ibovespa:
+    st.write("Lista de ações da Ibovespa:", tickers_ibovespa)
+
+    # Define as datas de início e fim para obter os preços
+    start_date = st.date_input("Data de início", value=pd.to_datetime('2022-01-01'))
+    end_date = st.date_input("Data de fim", value=pd.to_datetime('2022-12-31'))
+
+    # Obtém os preços ajustados de fechamento das empresas
+    df_adj_close_prices = get_adj_close_prices(tickers_ibovespa, start_date, end_date)
+    st.write("Preços ajustados de fechamento das empresas:")
+    st.write(df_adj_close_prices)
+
+    # Calcula os pesos ótimos que maximizam o índice de Sharpe da carteira
+    optimal_weights = maximize_sharpe_ratio(df_adj_close_prices)
+    st.write("Pesos ótimos para maximizar o índice de Sharpe:", optimal_weights)
+
+    # Calcula o índice de Sharpe da carteira com os pesos ótimos
+    sharpe_ratio_optimal = calculate_sharpe_ratio(df_adj_close_prices, optimal_weights)
+    st.write("Índice de Sharpe da carteira com pesos ótimos:", sharpe_ratio_optimal)
+
+    # Solicita ao usuário o valor a ser investido
+    investment_amount = st.number_input("Valor a ser investido", min_value=0.0, step=100.0, value=1000.0)
+
+    # Calcula o lucro com base no índice de Sharpe e no valor investido
+    profit = calculate_profit(investment_amount, sharpe_ratio_optimal)
+    st.write("Lucro estimado com base no índice de Sharpe:", profit)
