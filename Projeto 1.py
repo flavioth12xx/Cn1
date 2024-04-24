@@ -7,8 +7,8 @@ import numpy as np
 from scipy.optimize import minimize
 
 def obter_lista_acoes_ibovespa():
-    # URL da página da Wikipedia
-    url = "https://pt.wikipedia.org/wiki/Lista_de_companhias_citadas_no_Ibovespa"
+    # URL da página da B3
+    url = "https://www.b3.com.br/pt_br/produtos-e-servicos/negociacao/renda-variavel/empresas-listadas.htm"
 
     # Fazendo a requisição para obter o conteúdo da página
     response = requests.get(url)
@@ -28,7 +28,7 @@ def obter_lista_acoes_ibovespa():
             for row in table.find_all("tr")[1:]:
                 cells = row.find_all("td")
                 if len(cells) >= 2:  # Verifica se há pelo menos duas células na linha
-                    nome_acao = cells[0].text.strip()  # Obtém o nome da ação
+                    nome_acao = cells[1].text.strip()  # Obtém o nome da ação (segunda coluna)
                     companies.append(nome_acao)
             return companies
         else:
@@ -44,16 +44,20 @@ def get_adj_close_prices(tickers, start_date, end_date):
 
     # Itera sobre os tickers para obter os preços de cada empresa
     for ticker in tickers:
-        # Obtém os dados do ticker no intervalo de datas especificado
-        data = yf.download(ticker + ".SA", start=start_date, end=end_date)
-        # Adiciona os preços ajustados de fechamento ao DataFrame
-        df_prices[ticker] = data["Adj Close"]
+        try:
+            # Obtém os dados do ticker no intervalo de datas especificado
+            data = yf.download(ticker + ".SA", start=start_date, end=end_date)
+            # Adiciona os preços ajustados de fechamento ao DataFrame
+            df_prices[ticker] = data["Adj Close"]
+        except yf.errors.YahooFinanceError:
+            st.error(f"Erro ao baixar dados para {ticker}")
 
     return df_prices
 
 def calculate_sharpe_ratio(df_prices, weights):
     if isinstance(weights, list):
         weights = np.array(weights)
+
     # Calcula os retornos diários das ações
     daily_returns = df_prices.pct_change()
 
@@ -95,38 +99,36 @@ def maximize_sharpe_ratio(df_prices):
     # Retorna os pesos ótimos que maximizam o índice de Sharpe
     return result.x
 
-# Função para calcular o lucro com base no índice de Sharpe e no valor investido
-def calculate_profit(investment_amount, sharpe_ratio):
-    return investment_amount * sharpe_ratio
+# Main program
 
-# Título da página
-st.title('Análise de Investimentos')
+if __name__ == "__main__":
+    st.title('Análise de Investimentos')
 
-# Obtém a lista de ações da Ibovespa
-tickers_ibovespa = obter_lista_acoes_ibovespa()
-if tickers_ibovespa:
-    st.write("Lista de ações da Ibovespa:", tickers_ibovespa)
+    # Obtém a lista de ações da Ibovespa
+    tickers_ibovespa = obter_lista_acoes_ibovespa()
+    if tickers_ibovespa:
+        st.write("Lista de ações da Ibovespa:", tickers_ibovespa)
 
-    # Define as datas de início e fim para obter os preços
-    start_date = st.date_input("Data de início", value=pd.to_datetime('2022-01-01'))
-    end_date = st.date_input("Data de fim", value=pd.to_datetime('2022-12-31'))
+        # Define as datas de início e fim para obter os preços
+        start_date = st.date_input("Data de início", value=pd.to_datetime('2022-01-01'))
+        end_date = st.date_input("Data de fim", value=pd.to_datetime('2022-12-31'))
 
-    # Obtém os preços ajustados de fechamento das empresas
-    df_adj_close_prices = get_adj_close_prices(tickers_ibovespa, start_date, end_date)
-    st.write("Preços ajustados de fechamento das empresas:")
-    st.write(df_adj_close_prices)
+        # Obtém os preços ajustados de fechamento das empresas
+        df_adj_close_prices = get_adj_close_prices(tickers_ibovespa, start_date, end_date)
+        st.write("Preços ajustados de fechamento das empresas:")
+        st.write(df_adj_close_prices)
 
-    # Calcula os pesos ótimos que maximizam o índice de Sharpe da carteira
-    optimal_weights = maximize_sharpe_ratio(df_adj_close_prices)
-    st.write("Pesos ótimos para maximizar o índice de Sharpe:", optimal_weights)
+        # Calcula os pesos ótimos que maximizam o índice de Sharpe da carteira
+        optimal_weights = maximize_sharpe_ratio(df_adj_close_prices)
+        st.write("Pesos ótimos para maximizar o índice de Sharpe:", optimal_weights)
 
-    # Calcula o índice de Sharpe da carteira com os pesos ótimos
-    sharpe_ratio_optimal = calculate_sharpe_ratio(df_adj_close_prices, optimal_weights)
-    st.write("Índice de Sharpe da carteira com pesos ótimos:", sharpe_ratio_optimal)
+        # Calcula o índice de Sharpe da carteira com os pesos ótimos
+        sharpe_ratio_optimal = calculate_sharpe_ratio(df_adj_close_prices, optimal_weights)
+        st.write("Índice de Sharpe da carteira com pesos ótimos:", sharpe_ratio_optimal)
 
-    # Solicita ao usuário o valor a ser investido
-    investment_amount = st.number_input("Valor a ser investido", min_value=0.0, step=100.0, value=1000.0)
+        # Solicita ao usuário o valor a ser investido
+        investment_amount = st.number_input("Valor a ser investido", min_value=0.0, step=100.0, value=1000.0)
 
-    # Calcula o lucro com base no índice de Sharpe e no valor investido
-    profit = calculate_profit(investment_amount, sharpe_ratio_optimal)
-    st.write("Lucro estimado com base no índice de Sharpe:", profit)
+        # Calcula o lucro com base no índice de Sharpe e no valor investido
+        profit = calculate_profit(investment_amount, sharpe_ratio_optimal)
+        st.write("Lucro estimado com base no índice de Sharpe:", profit)
