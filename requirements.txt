@@ -6,3 +6,5 @@ requests
 bs4
 sympy
 explain 
+scipy
+minimaize
