@@ -7,4 +7,4 @@ bs4
 sympy
 explain 
 scipy.optimize
-minimaize
+
