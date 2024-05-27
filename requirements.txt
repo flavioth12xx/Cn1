@@ -8,5 +8,5 @@ sympy
 explain 
 scipy
 numpy 
-simplex_method
+
 
