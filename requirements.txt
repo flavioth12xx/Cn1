@@ -8,5 +8,5 @@ sympy
 explain 
 scipy
 minimize
-simplex
+numpy
 
