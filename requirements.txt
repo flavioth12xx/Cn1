@@ -8,6 +8,6 @@ sympy
 explain 
 scipy
 minimize
-numpy as np
+numpy 
 simplex_method
 
