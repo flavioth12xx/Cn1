@@ -9,5 +9,6 @@ explain
 scipy
 numpy 
 pipenv
+MutableMapping
 
 
