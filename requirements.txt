@@ -9,4 +9,5 @@ explain
 scipy
 minimize
 numpy
+simplex
 
