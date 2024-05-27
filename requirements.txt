@@ -8,4 +8,5 @@ sympy
 explain 
 scipy
 minimize
+simplex
 
