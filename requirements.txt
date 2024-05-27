@@ -9,6 +9,6 @@ explain
 scipy
 numpy 
 MutableMapping
-safeRemoveChild
+RemoveChild
 
 
