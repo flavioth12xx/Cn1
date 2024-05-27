@@ -7,7 +7,6 @@ bs4
 sympy
 explain 
 scipy
-minimize
 numpy 
 simplex_method
 
